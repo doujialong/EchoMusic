@@ -109,17 +109,18 @@ export function getUserVipDetail() {
 /**
  * 领取每日畅听会员
  */
-export function claimDayVip(day: string) {
+export function claimDayVip(day: string, skipKugouVerification = false) {
   return request.get('/youth/day/vip', {
     params: { receive_day: day },
+    skipKugouVerification,
   });
 }
 
 /**
  * 升级每日概念会员
  */
-export function upgradeDayVip() {
-  return request.get('/youth/day/vip/upgrade');
+export function upgradeDayVip(skipKugouVerification = false) {
+  return request.get('/youth/day/vip/upgrade', { skipKugouVerification });
 }
 
 /**

@@ -14,6 +14,7 @@ import { usePlaylistStore } from './stores/playlist';
 import { useHistoryStore } from './stores/historyStore';
 import { useToastStore } from './stores/toast';
 import { useUserStore } from './stores/user';
+import { useVipClaimStore } from './stores/vipClaim';
 import { waitForSqlitePersistHydration } from './stores/sqlitePersist';
 import { clearCloudAudioIndex, refreshCloudAudioIndex } from '@/services/cloudAudioIndex';
 import { initShortcutSync, syncGlobalShortcuts } from '@/utils/shortcuts';
@@ -47,6 +48,12 @@ const playlistStore = usePlaylistStore();
 const historyStore = useHistoryStore();
 const toastStore = useToastStore();
 const userStore = useUserStore();
+const vipClaim = useVipClaimStore();
+let vipReady = false;
+let vipTimer: number | undefined;
+const autoClaimVip = () => {
+  if (vipReady && !isMiniPlayerRoute.value) void vipClaim.claim();
+};
 let disposeShortcuts: (() => void) | null = null;
 let disposeDesktopLyricSync: (() => void) | null = null;
 let disposeMiniPlayerSync: (() => void) | null = null;
@@ -217,6 +224,10 @@ onMounted(async () => {
   }
 
   await waitForSqlitePersistHydration();
+  vipReady = true;
+  autoClaimVip();
+  vipTimer = window.setInterval(autoClaimVip, 60000);
+  window.addEventListener('focus', autoClaimVip);
   settings.ensureShortcutDefaults();
   await settings.hydrateLogSettings();
   await Promise.all([playlistStore.hydratePlaybackStateFromStorage(), historyStore.hydrate()]);
@@ -275,6 +286,9 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  vipReady = false;
+  window.clearInterval(vipTimer);
+  window.removeEventListener('focus', autoClaimVip);
   window.removeEventListener('focus', scheduleClipboardShareCheck);
   window.removeEventListener(SHARE_COPIED_EVENT, handleShareCopied);
   if (silentUpdateCheckTimer !== null) {
@@ -347,6 +361,7 @@ watch(
     syncTrayPlayback();
   },
 );
+watch(() => [userStore.info?.userid, userStore.info?.token, vipClaim.enabled], autoClaimVip);
 watch(
   () => userStore.isLoggedIn,
   (loggedIn) => {

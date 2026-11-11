@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useClipboard } from '@vueuse/core';
 import { useSettingStore } from '@/stores/setting';
 import { useUserStore } from '@/stores/user';
+import { useVipClaimStore } from '@/stores/vipClaim';
 import { useDeviceStore } from '@/stores/device';
 import { useToastStore } from '@/stores/toast';
 import { buildAuthHeader } from '@/utils/request';
@@ -22,6 +23,8 @@ import { sectionTitles } from '../constants';
 
 const settingStore = useSettingStore();
 const userStore = useUserStore();
+const vipClaim = useVipClaimStore();
+const claimMessage = computed(() => vipClaim.attempts[String(userStore.info?.userid)]?.message || '尚未尝试领取');
 const deviceStore = useDeviceStore();
 const toastStore = useToastStore();
 const { copy } = useClipboard();
@@ -138,6 +141,21 @@ const setDpiScale = (value: number) => {
       <FontIcon v-else :size="20" class="text-primary" />
     </template>
 
+    <div class="settings-item">
+      <div class="space-y-1">
+        <h3 class="font-semibold">自动领取每日会员</h3>
+        <p class="text-sm text-text-secondary">登录、启动和跨天时尝试领取畅听会员、升级概念会员及关联权益；失败时每半小时重试，每个账号每天最多自动尝试三次。</p>
+      </div>
+      <Switch v-model="vipClaim.enabled" />
+    </div>
+    <div class="settings-item">
+      <p class="text-sm text-text-secondary" role="status">{{ claimMessage }}</p>
+      <Button :disabled="!userStore.isLoggedIn || vipClaim.busy" @click="vipClaim.claim(true)">
+        {{ vipClaim.busy ? '正在领取…' : '立即尝试领取' }}
+      </Button>
+    </div>
+    <p class="text-sm text-text-secondary">权益以平台返回和个人主页到期时间为准。需要广告或其他任务的权益，请在官方 App 完成条件。手动重试间隔为一分钟。</p>
+    <div class="settings-divider"></div>
     <div class="settings-item">
       <div class="space-y-1">
         <h3 class="font-semibold">页面缓存</h3>
